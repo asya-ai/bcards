@@ -59,10 +59,19 @@ export const cardViews = pgTable("card_views", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const analyticsDividers = pgTable("analytics_dividers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  eventAt: timestamp("event_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   links: many(links),
   contactSubmissions: many(contactSubmissions),
   cardViews: many(cardViews),
+  analyticsDividers: many(analyticsDividers),
 }));
 
 export const linksRelations = relations(links, ({ one }) => ({
@@ -76,4 +85,8 @@ export const contactSubmissionsRelations = relations(contactSubmissions, ({ one 
 export const cardViewsRelations = relations(cardViews, ({ one }) => ({
   user: one(users, { fields: [cardViews.userId], references: [users.id] }),
   clickedLink: one(links, { fields: [cardViews.clickedLinkId], references: [links.id] }),
+}));
+
+export const analyticsDividersRelations = relations(analyticsDividers, ({ one }) => ({
+  user: one(users, { fields: [analyticsDividers.userId], references: [users.id] }),
 }));

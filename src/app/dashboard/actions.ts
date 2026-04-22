@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-import { users, links, cardViews } from "@/lib/db/schema";
+import { users, links, cardViews, analyticsDividers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDefaultLinks } from "@/lib/settings";
@@ -167,10 +167,52 @@ export async function reorderLinks(linkIds: string[]) {
   revalidatePath(`/${user.username}`);
 }
 
+export async function addAnalyticsDivider(formData: FormData) {
+  const user = await ensureUserExists();
+
+  const title = (formData.get("title") as string)?.trim();
+  const eventAtRaw = (formData.get("eventAt") as string)?.trim();
+  const timezoneOffsetRaw = (formData.get("timezoneOffsetMinutes") as string)?.trim();
+
+  if (!title) throw new Error("Title is required");
+  if (!eventAtRaw) throw new Error("Event date and time is required");
+
+  const localDateMatch = eventAtRaw.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+  const timezoneOffsetMinutes = Number(timezoneOffsetRaw);
+
+  let eventAt: Date;
+
+  if (localDateMatch && Number.isFinite(timezoneOffsetMinutes)) {
+    const [, year, month, day, hour, minute, second] = localDateMatch;
+    const utcMillis = Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      second ? Number(second) : 0,
+    ) + timezoneOffsetMinutes * 60_000;
+    eventAt = new Date(utcMillis);
+  } else {
+    eventAt = new Date(eventAtRaw);
+  }
+
+  if (Number.isNaN(eventAt.getTime())) throw new Error("Invalid event date and time");
+
+  await db.insert(analyticsDividers).values({
+    userId: user.id,
+    title,
+    eventAt,
+  });
+
+  revalidatePath("/dashboard/analytics");
+}
+
 export async function clearAnalytics() {
   const user = await ensureUserExists();
 
   await db.delete(cardViews).where(eq(cardViews.userId, user.id));
+  await db.delete(analyticsDividers).where(eq(analyticsDividers.userId, user.id));
 
   revalidatePath("/dashboard/analytics");
 }

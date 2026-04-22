@@ -19,7 +19,7 @@ services:
       context: .
       target: migrator
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://bcard:bcard@db:5432/bcard}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-bcard}:${POSTGRES_PASSWORD:-bcard}@db:5432/${POSTGRES_DB:-bcard}
     depends_on:
       db:
         condition: service_healthy
@@ -36,7 +36,7 @@ services:
       - ./data/uploads:/app/public/uploads
     env_file: .env
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgresql://bcard:bcard@db:5432/bcard}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-bcard}:${POSTGRES_PASSWORD:-bcard}@db:5432/${POSTGRES_DB:-bcard}
     depends_on:
       migrate:
         condition: service_completed_successfully
