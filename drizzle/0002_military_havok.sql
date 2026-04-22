@@ -1,0 +1,1 @@
+ALTER TABLE "card_views" ADD COLUMN "viewer_user_id" uuid;
