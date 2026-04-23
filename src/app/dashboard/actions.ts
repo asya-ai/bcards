@@ -8,6 +8,14 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getDefaultLinks } from "@/lib/settings";
 
+function normalizeUsername(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9.-]/g, ".")
+    .replace(/\.{2,}/g, ".")
+    .replace(/^\.+|\.+$/g, "");
+}
+
 export async function ensureUserExists() {
   const session = await auth();
   if (!session?.user) throw new Error("Not authenticated");
@@ -17,11 +25,9 @@ export async function ensureUserExists() {
   });
 
   if (!user) {
-    const username = (session.user.name ?? session.user.email ?? "user")
-      .toLowerCase()
-      .replace(/[^a-z0-9.-]/g, ".")
-      .replace(/\.{2,}/g, ".")
-      .replace(/^\.+|\.+$/g, "");
+    const username = normalizeUsername(
+      session.user.preferredUsername ?? session.user.name ?? session.user.email ?? "user"
+    );
 
     const [newUser] = await db
       .insert(users)
@@ -84,9 +90,26 @@ export async function updateProfileForUser(userId: string, formData: FormData) {
   const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
   if (!user) throw new Error("User not found");
 
+  const requestedUsername = (formData.get("username") as string) ?? user.username;
+  const nextUsername = normalizeUsername(requestedUsername);
+
+  if (!nextUsername) throw new Error("Username is required");
+
+  if (nextUsername !== user.username) {
+    const existingWithUsername = await db.query.users.findFirst({
+      where: eq(users.username, nextUsername),
+      columns: { id: true },
+    });
+
+    if (existingWithUsername && existingWithUsername.id !== user.id) {
+      throw new Error("Username already exists");
+    }
+  }
+
   await db
     .update(users)
     .set({
+      username: nextUsername,
       displayName: (formData.get("displayName") as string) || user.displayName,
       jobTitle: formData.get("jobTitle") as string,
       company: formData.get("company") as string,
@@ -102,6 +125,7 @@ export async function updateProfileForUser(userId: string, formData: FormData) {
 
   revalidatePath("/dashboard/admin");
   revalidatePath(`/${user.username}`);
+  revalidatePath(`/${nextUsername}`);
 }
 
 export async function addLink(formData: FormData) {

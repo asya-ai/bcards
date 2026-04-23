@@ -87,10 +87,7 @@ export function AdminEditForm({ user, links }: { user: User; links: LinkItem[] }
         <h2 className="mb-6 text-lg font-semibold text-[var(--color-font)]">Profile</h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-font)]/80">Username (URL slug)</label>
-            <p className="mt-1 rounded-lg border border-[var(--color-secondary-5)] bg-[var(--color-secondary-3)]/50 px-4 py-2.5 text-sm text-[var(--color-font)]/50">/{user.username}</p>
-          </div>
+          <Field label="Username (URL slug)" name="username" defaultValue={user.username} />
           <Field label="Display Name" name="displayName" defaultValue={user.displayName} />
           <Field label="Job Title" name="jobTitle" defaultValue={user.jobTitle ?? ""} />
           <Field label="Company" name="company" defaultValue={user.company ?? ""} />

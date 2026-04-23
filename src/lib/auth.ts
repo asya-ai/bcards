@@ -20,6 +20,7 @@ export const authConfig: NextAuthConfig = {
         return {
           id: profile.sub,
           name: profile.name ?? profile.preferred_username,
+          preferredUsername: profile.preferred_username ?? profile.nickname,
           email: profile.email,
           image: profile.picture,
           groups: profile.groups ?? [],
@@ -31,6 +32,7 @@ export const authConfig: NextAuthConfig = {
     async jwt({ token, profile }) {
       if (profile) {
         token.sub = profile.sub ?? undefined;
+        token.preferredUsername = (profile as Record<string, unknown>).preferredUsername;
         token.groups = (profile as Record<string, unknown>).groups ?? [];
       }
       return token;
@@ -41,6 +43,7 @@ export const authConfig: NextAuthConfig = {
       const groups = (token.groups as string[]) ?? [];
 
       session.user.id = token.sub!;
+      session.user.preferredUsername = typeof token.preferredUsername === "string" ? token.preferredUsername : undefined;
       session.user.isAdmin = groups.includes(groupAdmin);
       session.user.isUser = groups.includes(groupUser) || session.user.isAdmin;
       session.user.groups = groups;
